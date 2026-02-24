@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const modeOptions = [
   "fast math",
@@ -18,12 +18,13 @@ const modeOptions = [
 
 export default function Page() {
   const promptRef = useRef<HTMLTextAreaElement>(null);
+  const [mode, setMode] = useState("fast general"); // store dropdown value
+  const [response, setResponse] = useState("");       // store backend answer
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const textarea = promptRef.current;
-    if (!textarea) {
-      return;
-    }
+    if (!textarea) return;
 
     const resize = () => {
       textarea.style.height = "auto";
@@ -38,18 +39,50 @@ export default function Page() {
     };
   }, []);
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault(); // prevent form from refreshing the page
+    if (!promptRef.current) return;
+
+    const query = promptRef.current.value;
+
+    setLoading(true);
+    setResponse("");
+
+    try {
+      const res = await fetch("/api/query", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query, mode }), // send both dropdown + textarea
+      });
+
+      const data = await res.json();
+      setResponse(data.answer || "No response from backend.");
+    } catch (err) {
+      console.error(err);
+      setResponse("Error: something went wrong");
+    }
+
+    setLoading(false);
+  };
+
   return (
     <main className="appShell">
       <h1 className="brand">RouteAI</h1>
 
-      <form className="promptForm" action="#" method="post">
+      <form className="promptForm" onSubmit={handleSubmit}>
         <label className="srOnly" htmlFor="modeSelect">
           Response mode
         </label>
-        <select id="modeSelect" name="mode" className="modeSelect" defaultValue="fast general">
-          {modeOptions.map((mode) => (
-            <option key={mode} value={mode}>
-              {mode}
+        <select
+          id="modeSelect"
+          name="mode"
+          className="modeSelect"
+          value={mode}
+          onChange={(e) => setMode(e.target.value)}
+        >
+          {modeOptions.map((option) => (
+            <option key={option} value={option}>
+              {option}
             </option>
           ))}
         </select>
@@ -65,10 +98,19 @@ export default function Page() {
           rows={1}
           placeholder="Message RouteAI"
         />
+
         <button className="sendButton" type="submit" aria-label="Send message">
           <span aria-hidden="true">↑</span>
         </button>
       </form>
+
+      {loading && <p>Loading...</p>}
+      {response && (
+        <div>
+          <h2>Answer:</h2>
+          <p>{response}</p>
+        </div>
+      )}
 
       <style jsx>{`
         :global(:root) {
