@@ -2,6 +2,20 @@
 
 import { useEffect, useRef } from "react";
 
+const modeOptions = [
+  "fast math",
+  "hard math",
+  "fast science",
+  "hard science",
+  "factoids",
+  "coding",
+  "writing",
+  "deep thinking",
+  "deep researching",
+  "reading",
+  "fast general",
+];
+
 export default function Page() {
   const promptRef = useRef<HTMLTextAreaElement>(null);
 
@@ -29,6 +43,17 @@ export default function Page() {
       <h1 className="brand">RouteAI</h1>
 
       <form className="promptForm" action="#" method="post">
+        <label className="srOnly" htmlFor="modeSelect">
+          Response mode
+        </label>
+        <select id="modeSelect" name="mode" className="modeSelect" defaultValue="fast general">
+          {modeOptions.map((mode) => (
+            <option key={mode} value={mode}>
+              {mode}
+            </option>
+          ))}
+        </select>
+
         <label className="srOnly" htmlFor="prompt">
           Message RouteAI
         </label>
@@ -65,7 +90,7 @@ export default function Page() {
         }
 
         .appShell {
-          width: min(760px, calc(100vw - 2rem));
+          width: min(900px, calc(100vw - 2rem));
           display: flex;
           flex-direction: column;
           align-items: center;
@@ -83,10 +108,10 @@ export default function Page() {
         .promptForm {
           width: 100%;
           display: grid;
-          grid-template-columns: 1fr auto;
+          grid-template-columns: auto 1fr auto;
           align-items: end;
           gap: 0.65rem;
-          padding: 0.72rem 0.72rem 0.72rem 1rem;
+          padding: 0.72rem;
           border: 1px solid #2f2f2f;
           border-radius: 1.55rem;
           background-color: #141414;
@@ -94,6 +119,23 @@ export default function Page() {
         }
 
         .promptForm:focus-within {
+          border-color: #4b4b4b;
+        }
+
+        .modeSelect {
+          align-self: stretch;
+          border: 1px solid #2f2f2f;
+          border-radius: 1rem;
+          background: #1c1c1c;
+          color: #f2f2f2;
+          font-size: 0.95rem;
+          padding: 0.6rem 0.75rem;
+          outline: none;
+          min-width: 11.75rem;
+          text-transform: capitalize;
+        }
+
+        .modeSelect:focus-visible {
           border-color: #4b4b4b;
         }
 
@@ -107,7 +149,7 @@ export default function Page() {
           line-height: 1.45;
           min-height: 1.8rem;
           max-height: 14rem;
-          padding: 0.18rem 0;
+          padding: 0.55rem 0;
         }
 
         .promptInput::placeholder {
@@ -147,6 +189,17 @@ export default function Page() {
           overflow: hidden;
           clip: rect(0, 0, 0, 0);
           border: 0;
+        }
+
+        @media (max-width: 760px) {
+          .promptForm {
+            grid-template-columns: 1fr auto;
+          }
+
+          .modeSelect {
+            grid-column: 1 / -1;
+            min-width: 0;
+          }
         }
       `}</style>
     </main>
