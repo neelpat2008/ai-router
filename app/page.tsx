@@ -1,65 +1,154 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useRef } from "react";
+
+export default function Page() {
+  const promptRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const textarea = promptRef.current;
+    if (!textarea) {
+      return;
+    }
+
+    const resize = () => {
+      textarea.style.height = "auto";
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 224)}px`;
+    };
+
+    textarea.addEventListener("input", resize);
+    resize();
+
+    return () => {
+      textarea.removeEventListener("input", resize);
+    };
+  }, []);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <main className="appShell">
+      <h1 className="brand">RouteAI</h1>
+
+      <form className="promptForm" action="#" method="post">
+        <label className="srOnly" htmlFor="prompt">
+          Message RouteAI
+        </label>
+        <textarea
+          id="prompt"
+          name="prompt"
+          ref={promptRef}
+          className="promptInput"
+          rows={1}
+          placeholder="Message RouteAI"
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+        <button className="sendButton" type="submit" aria-label="Send message">
+          <span aria-hidden="true">↑</span>
+        </button>
+      </form>
+
+      <style jsx>{`
+        :global(:root) {
+          color-scheme: dark;
+        }
+
+        :global(*) {
+          box-sizing: border-box;
+        }
+
+        :global(body) {
+          margin: 0;
+          min-height: 100vh;
+          display: grid;
+          place-items: center;
+          font-family: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+          background: radial-gradient(circle at top, #171717 0%, #0b0b0b 55%);
+          color: #f2f2f2;
+        }
+
+        .appShell {
+          width: min(760px, calc(100vw - 2rem));
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 1.25rem;
+        }
+
+        .brand {
+          margin: 0;
+          font-size: clamp(2.5rem, 8vw, 4.25rem);
+          line-height: 1;
+          letter-spacing: 0.04em;
+          font-weight: 700;
+        }
+
+        .promptForm {
+          width: 100%;
+          display: grid;
+          grid-template-columns: 1fr auto;
+          align-items: end;
+          gap: 0.65rem;
+          padding: 0.72rem 0.72rem 0.72rem 1rem;
+          border: 1px solid #2f2f2f;
+          border-radius: 1.55rem;
+          background-color: #141414;
+          box-shadow: 0 4px 24px rgb(0 0 0 / 0.45), inset 0 1px 0 rgb(255 255 255 / 0.03);
+        }
+
+        .promptForm:focus-within {
+          border-color: #4b4b4b;
+        }
+
+        .promptInput {
+          resize: none;
+          border: none;
+          outline: none;
+          background: transparent;
+          color: #f2f2f2;
+          font-size: 1rem;
+          line-height: 1.45;
+          min-height: 1.8rem;
+          max-height: 14rem;
+          padding: 0.18rem 0;
+        }
+
+        .promptInput::placeholder {
+          color: #949494;
+        }
+
+        .sendButton {
+          border: none;
+          border-radius: 999px;
+          width: 2.25rem;
+          height: 2.25rem;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          background: #2a2a2a;
+          color: #f2f2f2;
+          cursor: pointer;
+          transition: background-color 140ms ease;
+          font-size: 1rem;
+        }
+
+        .sendButton:hover {
+          background: #3a3a3a;
+        }
+
+        .sendButton:focus-visible {
+          outline: 2px solid #949494;
+          outline-offset: 2px;
+        }
+
+        .srOnly {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          margin: -1px;
+          padding: 0;
+          overflow: hidden;
+          clip: rect(0, 0, 0, 0);
+          border: 0;
+        }
+      `}</style>
+    </main>
   );
 }
