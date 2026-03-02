@@ -3,15 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 
 const modeOptions = [
-  "fast math",
-  "hard math",
-  "fast science",
-  "hard science",
+  "math",
+  "science",
   "factoids",
   "coding",
   "writing",
-  "deep thinking",
-  "deep researching",
   "reading",
   "fast general",
 ];
