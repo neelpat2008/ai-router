@@ -45,11 +45,11 @@ export default function Page() {
     setResponse("");
 
     try {
-      const res = await fetch("/api/query", {
+      const res = await fetch("/api/chat", { 
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query, mode }), // send both dropdown + textarea
-      });
+        body: JSON.stringify({ query, mode }),
+    });
 
       const data = await res.json();
       setResponse(data.answer || "No response from backend.");
