@@ -45,14 +45,36 @@ export default function Page() {
     setResponse("");
 
     try {
-      const res = await fetch("/api/chat", { 
+      const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ query, mode }),
-    });
+      });
 
-      const data = await res.json();
-      setResponse(data.answer || "No response from backend.");
+      let data: { answer?: unknown; error?: unknown; details?: unknown } = {};
+      try {
+        data = await res.json();
+      } catch {
+        setResponse(`Could not read server response (HTTP ${res.status}).`);
+        setLoading(false);
+        return;
+      }
+
+      const answer = typeof data.answer === "string" ? data.answer.trim() : "";
+      const err =
+        typeof data.error === "string"
+          ? data.error
+          : typeof data.details === "string"
+            ? data.details
+            : "";
+
+      if (answer) {
+        setResponse(answer);
+      } else if (err) {
+        setResponse(err);
+      } else {
+        setResponse(`No response from backend (HTTP ${res.status}).`);
+      }
     } catch (err) {
       console.error(err);
       setResponse("Error: something went wrong");
