@@ -3,8 +3,11 @@ export async function POST(req: Request) {
     const { query, mode } = await req.json();
 
     const OPENROUTER_KEY = process.env.OPENROUTER_KEY;
+    if (!OPENROUTER_KEY) {
+      return new Response(JSON.stringify({ error: 'Missing OPENROUTER_KEY' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    }
 
-    const systemPrompt = `You are an assistant answering in "${mode}" mode.`;
+    const systemPrompt = mode ? `You are an assistant answering in "${mode}" mode.` : 'You are an assistant.';
 
     const response = await fetch("https://api.openrouter.ai/v1/chat/completions", {
       method: "POST",
@@ -23,20 +26,14 @@ export async function POST(req: Request) {
 
     const data = await response.json();
 
-    return new Response(
-      JSON.stringify({
-        answer: data.choices?.[0]?.message?.content || "No response",
-      }),
-      { status: 200 }
-    );
+    const answer = data.choices?.[0]?.message?.content || data?.output || null;
 
+    return new Response(JSON.stringify({ answer, raw: data }), { status: response.ok ? 200 : 500, headers: { 'Content-Type': 'application/json' } });
   } catch (err) {
-    return new Response(
-      JSON.stringify({ answer: "Error occurred" }),
-      { status: 500 }
-    );
+    return new Response(JSON.stringify({ error: 'Request failed', details: String(err) }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 }
+
 
 function getModelFromMode(mode: string) {
   switch (mode) {
