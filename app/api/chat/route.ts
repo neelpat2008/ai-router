@@ -40,14 +40,20 @@ export async function POST(req: Request) {
 
 function getModelFromMode(mode: string) {
   switch (mode) {
-    case "math":
-      return "openai/gpt-4o-mini";
-    case "coding":
-      return "deepseek/deepseek-coder";
-    case "writing":
-      return "anthropic/claude-3-haiku";
-    case "fast general":
+    case 'factoids':
+      return 'qwen/qwen3.6-plus-preview';
+    case 'science':
+      return 'qwen/qwen3.6-plus-preview';
+    case 'math':
+      return 'qwen/qwen3.6-plus-preview';
+    case 'coding':
+      return 'qwen/qwen3.6-plus-preview';
+    case 'writing':
+      return 'qwen/qwen3.6-plus-preview';
+    case 'reading':
+      return 'qwen/qwen3.6-plus-preview';
+    case 'fast general':
     default:
-      return "openai/gpt-4o-mini";
+      return 'qwen/qwen3.6-plus-preview';
   }
 }

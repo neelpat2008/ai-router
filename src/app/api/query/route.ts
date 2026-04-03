@@ -1,14 +1,58 @@
 export async function POST(req: Request) {
-  const body = await req.json();
+  try {
+    const { query, model, mode } = await req.json();
 
-  const response = await fetch("http://localhost:8000/process", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+    const OPENROUTER_KEY = process.env.OPENROUTER_KEY;
+    if (!OPENROUTER_KEY) {
+      return new Response(JSON.stringify({ error: 'Missing OPENROUTER_KEY' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    }
 
-  const data = await response.json();
-  return Response.json(data);
+    const systemPrompt = mode ? `You are an assistant answering in "${mode}" mode.` : 'You are an assistant.';
+
+    const modelToUse = model || getModelFromMode(mode);
+
+    const response = await fetch('https://api.openrouter.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${OPENROUTER_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: modelToUse,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: query },
+        ],
+      }),
+    });
+
+    const data = await response.json();
+
+    const answer = data?.choices?.[0]?.message?.content || data?.output || null;
+
+    return new Response(JSON.stringify({ answer, raw: data }), { status: response.ok ? 200 : 500, headers: { 'Content-Type': 'application/json' } });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: 'Request failed', details: String(err) }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+  }
+}
+
+function getModelFromMode(mode: string | undefined) {
+  switch (mode) {
+    case 'factoids':
+      return 'qwen/qwen3.6-plus-preview';
+    case 'science':
+      return 'qwen/qwen3.6-plus-preview';
+    case 'math':
+      return 'qwen/qwen3.6-plus-preview';
+    case 'coding':
+      return 'qwen/qwen3.6-plus-preview';
+    case 'writing':
+      return 'qwen/qwen3.6-plus-preview';
+    case 'reading':
+      return 'qwen/qwen3.6-plus-preview';
+    case 'fast general':
+      return 'qwen/qwen3.6-plus-preview';
+    default:
+      return 'qwen/qwen3.6-plus-preview';
+  }
 }
