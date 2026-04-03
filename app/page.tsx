@@ -61,12 +61,12 @@ export default function Page() {
       }
 
       const answer = typeof data.answer === "string" ? data.answer.trim() : "";
+      const errPart = typeof data.error === "string" ? data.error.trim() : "";
+      const detailsPart = typeof data.details === "string" ? data.details.trim() : "";
       const err =
-        typeof data.error === "string"
-          ? data.error
-          : typeof data.details === "string"
-            ? data.details
-            : "";
+        errPart && detailsPart && errPart !== detailsPart
+          ? `${errPart} — ${detailsPart}`
+          : errPart || detailsPart;
 
       if (answer) {
         setResponse(answer);

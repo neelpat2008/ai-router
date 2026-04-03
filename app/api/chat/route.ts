@@ -1,9 +1,14 @@
 /** Allow long OpenRouter calls on Vercel (Pro: up to 60s; Hobby: capped by plan). */
 export const maxDuration = 60;
 
+/** Node runtime avoids Edge limitations on outbound fetch / timeouts. */
+export const runtime = "nodejs";
+
 function getOpenRouterKey(): string | undefined {
   const k = process.env.OPENROUTER_KEY ?? process.env.OPENROUTER_API_KEY;
-  const t = typeof k === "string" ? k.trim() : "";
+  if (typeof k !== "string") return undefined;
+  // Newlines in pasted Vercel secrets break the Authorization header and make fetch throw.
+  const t = k.replace(/\r\n|\r|\n|\t/g, "").trim();
   return t || undefined;
 }
 
@@ -34,30 +39,42 @@ function extractOpenRouterError(data: unknown): string | undefined {
 }
 
 export async function POST(req: Request) {
+  let body: unknown;
   try {
-    const body = await req.json();
-    const query = typeof body.query === "string" ? body.query : "";
-    const mode = typeof body.mode === "string" ? body.mode : "";
+    body = await req.json();
+  } catch {
+    return Response.json({ error: "Invalid JSON in request body.", answer: null }, { status: 400 });
+  }
 
-    if (!query.trim()) {
-      return Response.json({ error: "Missing or empty query.", answer: null }, { status: 400 });
-    }
+  const query = body && typeof body === "object" && "query" in body && typeof (body as { query: unknown }).query === "string" ? (body as { query: string }).query : "";
+  const mode = body && typeof body === "object" && "mode" in body && typeof (body as { mode: unknown }).mode === "string" ? (body as { mode: string }).mode : "";
 
-    const apiKey = getOpenRouterKey();
-    if (!apiKey) {
-      return Response.json(
-        {
-          error:
-            "Missing API key: set OPENROUTER_KEY (or OPENROUTER_API_KEY) in Vercel → Project → Settings → Environment Variables, then redeploy.",
-          answer: null,
-        },
-        { status: 500 },
-      );
-    }
+  if (!query.trim()) {
+    return Response.json({ error: "Missing or empty query.", answer: null }, { status: 400 });
+  }
 
-    const systemPrompt = mode ? `You are an assistant answering in "${mode}" mode.` : "You are an assistant.";
+  const apiKey = getOpenRouterKey();
+  if (!apiKey) {
+    return Response.json(
+      {
+        error:
+          "Missing API key: set OPENROUTER_KEY (or OPENROUTER_API_KEY) in Vercel → Project → Settings → Environment Variables, then redeploy.",
+        answer: null,
+      },
+      { status: 500 },
+    );
+  }
 
-    const response = await fetch("https://api.openrouter.ai/v1/chat/completions", {
+  const systemPrompt = mode ? `You are an assistant answering in "${mode}" mode.` : "You are an assistant.";
+
+  const fetchSignal =
+    typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function"
+      ? AbortSignal.timeout(55_000)
+      : undefined;
+
+  let response: Response;
+  try {
+    response = await fetch("https://api.openrouter.ai/v1/chat/completions", {
       method: "POST",
       headers: openRouterRequestHeaders(apiKey),
       body: JSON.stringify({
@@ -67,8 +84,20 @@ export async function POST(req: Request) {
           { role: "user", content: query },
         ],
       }),
+      ...(fetchSignal ? { signal: fetchSignal } : {}),
     });
+  } catch (err) {
+    const cause = err instanceof Error ? err.message : String(err);
+    return Response.json(
+      {
+        error: `Could not reach OpenRouter (${cause}). Check Vercel function logs and network.`,
+        answer: null,
+      },
+      { status: 502 },
+    );
+  }
 
+  try {
     const text = await response.text();
     let data: unknown = {};
     try {
@@ -118,7 +147,14 @@ export async function POST(req: Request) {
 
     return Response.json({ answer, raw: data }, { status: 200 });
   } catch (err) {
-    return Response.json({ error: "Request failed", details: String(err), answer: null }, { status: 500 });
+    const message = err instanceof Error ? err.message : String(err);
+    return Response.json(
+      {
+        error: `Server error while handling OpenRouter response: ${message}`,
+        answer: null,
+      },
+      { status: 500 },
+    );
   }
 }
 
