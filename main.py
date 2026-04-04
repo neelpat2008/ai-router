@@ -80,7 +80,7 @@ async def process(request: QueryRequest):
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 
     if provider == "openrouter":
-        url = "https://api.openrouter.ai/v1/chat/completions"
+        url = "https://openrouter.ai/api/v1/chat/completions"
         # default to the OpenRouter free model; override with OPENROUTER_MODEL env var
         payload = {
             "model": os.getenv("OPENROUTER_MODEL", "openrouter/free"),

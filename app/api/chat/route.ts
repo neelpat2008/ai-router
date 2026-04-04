@@ -2,7 +2,8 @@ import dns from "node:dns";
 import https from "node:https";
 import { URL } from "node:url";
 
-const OPENROUTER_CHAT_URL = "https://api.openrouter.ai/v1/chat/completions";
+/** Official host (see OpenRouter quickstart); `api.openrouter.ai` is not used and often does not resolve. */
+const OPENROUTER_CHAT_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 /** Allow long OpenRouter calls on Vercel (Pro: up to 60s; Hobby: capped by plan). */
 export const maxDuration = 60;
@@ -31,7 +32,7 @@ function openRouterRequestHeaders(apiKey: string): Record<string, string> {
     Authorization: `Bearer ${apiKey}`,
     "Content-Type": "application/json",
     "HTTP-Referer": referer,
-    "X-Title": title,
+    "X-OpenRouter-Title": title,
   };
 }
 
