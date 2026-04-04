@@ -1,8 +1,17 @@
+import dns from "node:dns";
+import https from "node:https";
+import { URL } from "node:url";
+
+const OPENROUTER_CHAT_URL = "https://api.openrouter.ai/v1/chat/completions";
+
 /** Allow long OpenRouter calls on Vercel (Pro: up to 60s; Hobby: capped by plan). */
 export const maxDuration = 60;
 
 /** Node runtime avoids Edge limitations on outbound fetch / timeouts. */
 export const runtime = "nodejs";
+
+// Vercel/Node often prefers AAAA records; IPv6 egress can fail and undici only reports "fetch failed".
+dns.setDefaultResultOrder("ipv4first");
 
 function getOpenRouterKey(): string | undefined {
   const k = process.env.OPENROUTER_KEY ?? process.env.OPENROUTER_API_KEY;
@@ -24,6 +33,63 @@ function openRouterRequestHeaders(apiKey: string): Record<string, string> {
     "HTTP-Referer": referer,
     "X-Title": title,
   };
+}
+
+/** When undici fetch fails (often on Vercel + IPv6), force IPv4 via node:https. */
+function postJsonHttpsIpv4(
+  urlString: string,
+  headers: Record<string, string>,
+  jsonBody: string,
+  timeoutMs: number,
+): Promise<{ status: number; text: string }> {
+  const url = new URL(urlString);
+  const merged: Record<string, string> = {
+    ...headers,
+    "Content-Length": String(Buffer.byteLength(jsonBody, "utf8")),
+  };
+
+  return new Promise((resolve, reject) => {
+    const req = https.request(
+      {
+        hostname: url.hostname,
+        port: url.port || 443,
+        path: `${url.pathname}${url.search}`,
+        method: "POST",
+        headers: merged,
+        timeout: timeoutMs,
+        lookup(hostname, _opts, cb) {
+          dns.lookup(hostname, { family: 4 }, cb);
+        },
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on("data", (chunk: Buffer) => chunks.push(chunk));
+        res.on("end", () => {
+          resolve({
+            status: res.statusCode ?? 0,
+            text: Buffer.concat(chunks).toString("utf8"),
+          });
+        });
+      },
+    );
+    req.on("error", reject);
+    req.on("timeout", () => {
+      req.destroy(new Error(`HTTPS timeout after ${timeoutMs}ms`));
+    });
+    req.write(jsonBody, "utf8");
+    req.end();
+  });
+}
+
+function formatFetchFailure(err: unknown): string {
+  if (!(err instanceof Error)) return String(err);
+  const parts: string[] = [err.message];
+  let c: unknown = err.cause;
+  for (let i = 0; i < 6 && c instanceof Error; i++) {
+    parts.push(c.message);
+    c = c.cause;
+  }
+  return parts.join(" | ");
 }
 
 function extractOpenRouterError(data: unknown): string | undefined {
@@ -67,6 +133,16 @@ export async function POST(req: Request) {
 
   const systemPrompt = mode ? `You are an assistant answering in "${mode}" mode.` : "You are an assistant.";
 
+  const jsonBody = JSON.stringify({
+    model: resolveModel(mode),
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: query },
+    ],
+  });
+
+  const headers = openRouterRequestHeaders(apiKey);
+
   const fetchSignal =
     typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function"
       ? AbortSignal.timeout(55_000)
@@ -74,27 +150,25 @@ export async function POST(req: Request) {
 
   let response: Response;
   try {
-    response = await fetch("https://api.openrouter.ai/v1/chat/completions", {
+    response = await fetch(OPENROUTER_CHAT_URL, {
       method: "POST",
-      headers: openRouterRequestHeaders(apiKey),
-      body: JSON.stringify({
-        model: resolveModel(mode),
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: query },
-        ],
-      }),
+      headers,
+      body: jsonBody,
       ...(fetchSignal ? { signal: fetchSignal } : {}),
     });
   } catch (err) {
-    const cause = err instanceof Error ? err.message : String(err);
-    return Response.json(
-      {
-        error: `Could not reach OpenRouter (${cause}). Check Vercel function logs and network.`,
-        answer: null,
-      },
-      { status: 502 },
-    );
+    try {
+      const { status, text } = await postJsonHttpsIpv4(OPENROUTER_CHAT_URL, headers, jsonBody, 55_000);
+      response = new Response(text, { status });
+    } catch (fallbackErr) {
+      return Response.json(
+        {
+          error: `Could not reach OpenRouter (fetch: ${formatFetchFailure(err)}; IPv4 fallback: ${formatFetchFailure(fallbackErr)}).`,
+          answer: null,
+        },
+        { status: 502 },
+      );
+    }
   }
 
   try {
