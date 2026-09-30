@@ -39,20 +39,20 @@ export async function POST(req: Request) {
 function getModelFromMode(mode: string | undefined) {
   switch (mode) {
     case 'factoids':
-      return 'inclusionai/ling-3.0-flash-sante:free';
+      return 'qwen/qwen3.8-27b:free';
     case 'science':
-      return 'inclusionai/ling-3.0-flash-sante:free';
+      return 'qwen/qwen3.8-27b:free';
     case 'math':
-      return 'inclusionai/ling-3.0-flash-sante:free';
+      return 'qwen/qwen3.8-27b:free';
     case 'coding':
-      return 'inclusionai/ling-3.0-flash-sante:free';
+      return 'qwen/qwen3.8-27b:free';
     case 'writing':
-      return 'inclusionai/ling-3.0-flash-sante:free';
+      return 'qwen/qwen3.8-27b:free';
     case 'reading':
-      return 'inclusionai/ling-3.0-flash-sante:free';
+      return 'qwen/qwen3.8-27b:free';
     case 'fast general':
-      return 'inclusionai/ling-3.0-flash-sante:free';
+      return 'qwen/qwen3.8-27b:free';
     default:
-      return 'inclusionai/ling-3.0-flash-sante:free';
+      return 'qwen/qwen3.8-27b:free';
   }
 }
