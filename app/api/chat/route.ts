@@ -240,7 +240,7 @@ function resolveModel(mode: string) {
   if (fromEnv) return fromEnv;
 
   // Free-tier ID from OpenRouter docs; preview slug often fails without credits / access.
-  const defaultModel = "qwen/qwen3.6-plus:free";
+  const defaultModel = "qwen/qwen3.8-27b:free";
   switch (mode) {
     case "factoids":
     case "science":
